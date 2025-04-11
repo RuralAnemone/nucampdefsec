@@ -162,7 +162,10 @@ EOF
 
 sleep 10
 
-multipass transfer ./kali/setup.sh nucamp-ubuntu-machine-2:/home/ubuntu
+curl https://gist.githubusercontent.com/DavidHoenisch/76d72f543aa5afbd58aa5f1e58694535/raw/ba46befd5d9ba54421240271b97c40be391cc5f3/setup.sh > setup.sh
+
+
+multipass transfer ./setup.sh nucamp-ubuntu-machine-2:/home/ubuntu
 
 multipass exec nucamp-ubuntu-machine-2 -- sudo bash /home/ubuntu/setup.sh
 
