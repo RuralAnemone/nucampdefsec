@@ -1,11 +1,5 @@
 #!/usr/bin/env bash
 
-
-
-
-
-
-
 # Get running instances
 current_count=$(multipass list --format json | jq -r '.list.[].name' | wc -l)
 current_names=$(multipass list --format json | jq -r '.list.[].name')

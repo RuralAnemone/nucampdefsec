@@ -1,5 +1,12 @@
 # PowerShell script to set up nucamp VMs using multipass
 
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+choco install virtualbox
+
+choco install multipass
+
+
 # Ensure multipass is installed (assuming it's available on the system)
 if (-not (Get-Command multipass -ErrorAction SilentlyContinue)) {
     Write-Host "Multipass is not installed. Please install it first."
