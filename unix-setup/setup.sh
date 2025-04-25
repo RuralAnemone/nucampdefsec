@@ -53,7 +53,7 @@ if [ "$OS" == "Linux" ]; then
     fi
 elif [ "$OS" == "Darwin" ]; then
     which homebrew > /dev/null
-    if [ $hb -ne 0]; then
+    if [ $? -ne 0]; then
         echo "Snap is not installed! But not to fear, I know a trick or two..."
         install_homebrew
     fi
@@ -71,7 +71,7 @@ if [ "$OS" == "Linux" ]; then
     fi
 elif [ "$OS" == "Darwin" ]; then
     which homebrew > /dev/null
-    if [ $hb -ne 0]; then
+    if [ $? -ne 0]; then
         echo "multipass is not installed! But not to fear, I know a trick or two..."
         brew install multipass
     fi
