@@ -4,7 +4,7 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManage
 
 choco install virtualbox
 
-choco install multipass
+choco install multipass --params="'/HyperVisor:VirtualBox'"
 
 
 # Ensure multipass is installed (assuming it's available on the system)
