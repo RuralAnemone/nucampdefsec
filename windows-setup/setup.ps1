@@ -8,7 +8,7 @@ choco install virtualbox -y
 choco install multipass --params="'/HyperVisor:VirtualBox'" -y
 
 # Wait a few seconds to ensure install completes
-Start-Sleep -Seconds 5
+Safe-Sleep 5
 
 # Ensure multipass is installed and available in the session
 if (-not (Get-Command multipass -ErrorAction SilentlyContinue)) {
@@ -33,14 +33,14 @@ to let you know all the things that I am doing
 
 "@
 
-Start-Sleep -Seconds 5
+Safe-Sleep 5
 
 Write-Host @"
 Ok, first I will check if you already have multipass machines running on your
 computer. This will help avoid potential naming conflicts.
 "@
 
-Start-Sleep -Seconds 5
+Safe-Sleep 5
 
 if ($currentCount -gt 0) {
     Write-Host "`nHey look, I found some running instances!`n"
@@ -60,7 +60,7 @@ If I find a conflict, I will tell you how to fix it.
 
 "@
 
-Start-Sleep -Seconds 5
+Safe-Sleep 5
 
 # Check for existing machines and exit on conflict
 foreach ($name in $newMachines) {
@@ -81,7 +81,7 @@ multipass delete $name && multipass purge
 }
 
 Write-Host "`nNo conflicts found! Creating your VMs now..."
-Start-Sleep -Seconds 3
+Safe-Sleep 3
 
 foreach ($name in $newMachines) {
     multipass launch --cpus 2 --memory 2G --name $name 24.04 --disk 20GB
@@ -114,7 +114,7 @@ Write-Host @"
 Now downloading and executing the setup script on the hacking machine...
 "@
 
-Start-Sleep -Seconds 3
+Safe-Sleep 3
 
 # Download setup script
 Invoke-WebRequest -Uri "https://gist.githubusercontent.com/DavidHoenisch/76d72f543aa5afbd58aa5f1e58694535/raw/ba46befd5d9ba54421240271b97c40be391cc5f3/setup.sh" -OutFile "ubuntu_setup.sh"
@@ -141,3 +141,14 @@ You're all set. If you run into issues, rerun this script or check logs inside t
 "@
 
 Pause
+
+# Custom Safe-Sleep function
+function Safe-Sleep {
+    param (
+        [int]$seconds = 0
+    )
+
+    if ($seconds -gt 0) {
+        Start-Sleep -Seconds $seconds
+    }
+}
