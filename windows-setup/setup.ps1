@@ -28,24 +28,6 @@ to let you know all the things that I am doing
 
 Start-Sleep -Seconds 10
 
-# Check for Homebrew (not typical on Windows, so we assume a package manager or skip for Windows)
-$hb = Get-Command brew -ErrorAction SilentlyContinue
-if (-not $hb) {
-    Write-Host @"
-
-The very first thing that I am going to do is ensure that you have the winget package manager
-installed on your computer (Homebrew is more common on macOS/Linux).
-
-"@
-    # For Windows, winget is typically pre-installed on modern systems
-    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        Write-Host "Winget is not installed. Please install it manually or use another package manager."
-        exit 1
-    }
-}
-
-Start-Sleep -Seconds 10
-
 Write-Host @"
 
 Ok, first I will check if you already have multipass machines running on your
