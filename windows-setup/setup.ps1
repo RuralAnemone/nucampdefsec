@@ -152,9 +152,9 @@ You are about to see a lot of stuff whiz by!!
 "@
 
 Start-Sleep -Seconds 10
-Invoke-WebRequest -Uri "https://gist.githubusercontent.com/DavidHoenisch/76d72f543aa5afbd58aa5f1e58694535/raw/ba46befd5d9ba54421240271b97c40be391cc5f3/setup.sh" -OutFile "setup.sh"
+Invoke-WebRequest -Uri "https://gist.githubusercontent.com/DavidHoenisch/76d72f543aa5afbd58aa5f1e58694535/raw/ba46befd5d9ba54421240271b97c40be391cc5f3/setup.sh" -OutFile "ubuntu_setup.sh"
 # Transfer and execute setup script (assuming ./kali/setup.sh exists locally)
-if (Test-Path ./setup.sh) {
+if (Test-Path ./ubuntu_setup.sh) {
     multipass transfer ./kali/setup.sh nucamp-ubuntu-machine-2:/home/ubuntu/setup.sh
     multipass exec nucamp-ubuntu-machine-2 -- sudo bash /home/ubuntu/setup.sh
     if ($LASTEXITCODE -ne 0) {
