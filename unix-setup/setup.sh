@@ -15,7 +15,7 @@ function install_homebrew() {
 
 cat << EOF
 
-Right, so first I will need to isntall snap for you
+Right, so first I will need to isntall homebrew for you
 
 EOF
 	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -52,9 +52,9 @@ if [ "$OS" == "Linux" ]; then
         fi
     fi
 elif [ "$OS" == "Darwin" ]; then
-    which homebrew > /dev/null
+    which brew > /dev/null
     if [ $? -ne 0 ]; then
-        echo "Snap is not installed! But not to fear, I know a trick or two..."
+        echo "Homebrew is not installed! But not to fear, I know a trick or two..."
         install_homebrew
     fi
 fi
