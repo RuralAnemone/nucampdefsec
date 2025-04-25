@@ -1,19 +1,26 @@
-# PowerShell script to set up nucamp VMs using multipass
+# Set execution policy and install Chocolatey with secure TLS
+Set-ExecutionPolicy Bypass -Scope Process -Force
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+# Install VirtualBox and Multipass via Chocolatey
+choco install virtualbox -y
+choco install multipass --params="'/HyperVisor:VirtualBox'" -y
 
-choco install virtualbox
+# Wait a few seconds to ensure install completes
+Start-Sleep -Seconds 5
 
-choco install multipass --params="'/HyperVisor:VirtualBox'"
-
-
-# Ensure multipass is installed (assuming it's available on the system)
+# Ensure multipass is installed and available in the session
 if (-not (Get-Command multipass -ErrorAction SilentlyContinue)) {
-    Write-Host "Multipass is not installed. Please install it first."
+    Write-Host "`n[!] Multipass is not installed or not in PATH yet. Try restarting your PowerShell session."
+    Pause
     exit 1
 }
 
-# Get running instances
+# Optionally purge old deleted instances
+multipass purge
+
+# Get current instances
 $currentInstances = multipass list --format json | ConvertFrom-Json
 $currentCount = $currentInstances.list.Count
 $currentNames = $currentInstances.list | Select-Object -ExpandProperty name
@@ -26,131 +33,111 @@ to let you know all the things that I am doing
 
 "@
 
-Start-Sleep -Seconds 10
+Start-Sleep -Seconds 5
 
 Write-Host @"
-
 Ok, first I will check if you already have multipass machines running on your
 computer. This will help avoid potential naming conflicts.
-
 "@
 
-Start-Sleep -Seconds 10
+Start-Sleep -Seconds 5
 
 if ($currentCount -gt 0) {
-    Write-Host "Hey look, I found some!`n"
+    Write-Host "`nHey look, I found some running instances!`n"
+    $currentNames | ForEach-Object { Write-Host " - $_" }
 }
 
 $newMachines = @("nucamp-ubuntu-machine-1", "nucamp-ubuntu-machine-2")
 
 Write-Host @"
-
-Ok, now that I know that you have machines already running, I will check for
-naming conflicts. Our machines will be called:
+Now I will check for naming conflicts.
+The machines I plan to create are:
 
 - nucamp-ubuntu-machine-1
 - nucamp-ubuntu-machine-2
 
-Just FYI, if I find naming conflicts I will exit out...
+If I find a conflict, I will tell you how to fix it.
 
 "@
 
-Start-Sleep -Seconds 10
+Start-Sleep -Seconds 5
 
-# Check for existing machines and exit on name conflicts
+# Check for existing machines and exit on conflict
 foreach ($name in $newMachines) {
     if ($currentNames -contains $name) {
-        Write-Host "`n[!] Found name conflict. Machine already exists with name $name"
+        Write-Host "`n[!] Found name conflict: $name already exists!"
         Write-Host @"
+You can fix this by renaming or deleting the existing VM.
 
-You may be wondering what to do now that I have found conflicts. Well, if you
-still need the machine with the conflicting name ($name), you can rename the
-machine with the following command:
+Rename:
+multipass clone $name --name <your-new-name>
 
-multipass clone $name --name <your new name here>
-
-Then, you can delete and purge the old machine with:
-
+Delete and purge:
 multipass delete $name && multipass purge
-
 "@
+        Pause
         exit 1
     }
 }
 
-Write-Host @"
+Write-Host "`nNo conflicts found! Creating your VMs now..."
+Start-Sleep -Seconds 3
 
-Ok, so good news; I did not find any name conflicts so we are good
-to go ahead and create the machines without an issue
-
-"@
-
-# Create new instances with specified features
 foreach ($name in $newMachines) {
     multipass launch --cpus 2 --memory 2G --name $name 24.04 --disk 20GB
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Ruh roh! Something is all screwy and I could not create the machine $name!"
+        Write-Host "[!] Failed to create machine: $name"
+        Pause
         exit 1
     }
 }
 
 Write-Host @"
+✔ All machines created successfully!
 
-Ok! That worked! Now I will do some basic health checks and configuration to be
-sure everything will work as expected.
-
-"@
-
-# Network health checks
-Write-Host @"
-
-First up, I need to make sure that each VM has access to the internet, this is
-required in order to update the VM and install software packages. The command
-I will run is:
-
-multipass exec <vm name> -- ping -c 3 1.1.1.1
-
-This command will 'ping' Cloudflare's DNS servers 3 times. This
-way we know that we can reach the WAN (wide area network)
-
+Now I will check if each VM can reach the internet by pinging 1.1.1.1...
 "@
 
 foreach ($name in $newMachines) {
+    Write-Host "`nChecking network for $name..."
     multipass exec $name -- ping -c 3 1.1.1.1
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Ruh roh! Something is all screwy and I could not verify network for $name!"
+        Write-Host "[!] Network check failed for $name!"
+        Pause
         exit 1
     }
 }
 
 Write-Host @"
+✔ Network looks good!
 
-Looks like the network is setup correctly!
-
-Now I will setup the hacking machine with all the tools that you will need.
-
-You are about to see a lot of stuff whiz by!!
-
+Now downloading and executing the setup script on the hacking machine...
 "@
 
-Start-Sleep -Seconds 10
+Start-Sleep -Seconds 3
+
+# Download setup script
 Invoke-WebRequest -Uri "https://gist.githubusercontent.com/DavidHoenisch/76d72f543aa5afbd58aa5f1e58694535/raw/ba46befd5d9ba54421240271b97c40be391cc5f3/setup.sh" -OutFile "ubuntu_setup.sh"
-# Transfer and execute setup script (assuming ./kali/setup.sh exists locally)
+
+# Verify the download
 if (Test-Path ./ubuntu_setup.sh) {
-    multipass transfer ./kali/setup.sh nucamp-ubuntu-machine-2:/home/ubuntu/setup.sh
+    multipass transfer ./ubuntu_setup.sh nucamp-ubuntu-machine-2:/home/ubuntu/setup.sh
     multipass exec nucamp-ubuntu-machine-2 -- sudo bash /home/ubuntu/setup.sh
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Hmmm.... Something went haywire with that setup."
-        Write-Host "The machine will still work but will need some help getting set up the rest of the way"
+        Write-Host "[!] Something went wrong with the setup script execution!"
+        Pause
         exit 1
     }
 } else {
-    Write-Host "Error: ./kali/setup.sh not found locally."
+    Write-Host "[!] Failed to download setup.sh. Please check your internet connection."
+    Pause
     exit 1
 }
 
 Write-Host @"
+🎉 Done setting up your VMs!
 
-That's it! I am done
-
+You're all set. If you run into issues, rerun this script or check logs inside the VMs.
 "@
+
+Pause
