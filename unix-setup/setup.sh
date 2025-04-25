@@ -1,8 +1,32 @@
 #!/usr/bin/env bash
 
-# Get running instances
-current_count=$(multipass list --format json | jq -r '.list.[].name' | wc -l)
-current_names=$(multipass list --format json | jq -r '.list.[].name')
+function install_snap() {
+
+cat << EOF
+
+"Right, so first I will need to isntall snap for you"
+
+EOF
+	sudo apt update
+	sudo apt install snapd
+}
+
+function install_homebrew() {
+
+cat << EOF
+
+Right, so first I will need to isntall snap for you
+
+EOF
+	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+
+	if [ $? -ne 0 ]; then
+		echo "hmmmm...That did not work! I am unable to install homebrew!"
+		exit 1
+	fi
+}
+
 
 
 cat << EOF
@@ -15,37 +39,58 @@ EOF
 
 sleep 10
 
+OS=$(uname -s)
 
-hb=$(which homebrew)
+## Check if snap or homebrew is installed
+if [ "$OS" == "Linux" ]; then
+    DISTRO=$(lsb_release -is)
+    if [[ $DISTRO == "Ubuntu" || $DISTRO == "Debian" || $DISTRO == "Linux Mint" || $DISTRO == "Pop!_OS" ]]; then
+        which snap > /dev/null
+        if [ $? -ne 0 ]; then
+            echo "Snap is not installed! But not to fear, I know a trick or two..."
+            install_snap
+        fi
+    fi
+elif [ "$OS" == "Darwin" ]; then
+    which homebrew > /dev/null
+    if [ $hb -ne 0]; then
+        echo "Snap is not installed! But not to fear, I know a trick or two..."
+        install_homebrew
+    fi
+fi
 
-if [ $hb -ne 0]; then
-
-cat << EOF
-
-The very first this that I am going to do is ensure that you have the homebrew package manager
-installed on your computer
-
-EOF
-	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-
-	if [ $? -ne 0 ]; then
-		echo "hmmmm...That did not work! I am unable to install homebrew!"
-		exit 1
-	fi
+## Check if multipass is installed
+if [ "$OS" == "Linux" ]; then
+    DISTRO=$(lsb_release -is)
+    if [[ $DISTRO == "Ubuntu" || $DISTRO == "Debian" || $DISTRO == "Linux Mint" || $DISTRO == "Pop!_OS" ]]; then
+        which multipass > /dev/null
+        if [ $? -ne 0 ]; then
+            echo "multipass is not installed! But not to fear, I know a trick or two..."
+            sudo snap install multipass
+        fi
+    fi
+elif [ "$OS" == "Darwin" ]; then
+    which homebrew > /dev/null
+    if [ $hb -ne 0]; then
+        echo "multipass is not installed! But not to fear, I know a trick or two..."
+        brew install multipass
+    fi
 fi
 
 sleep 10
 
-
 cat << EOF
 
-Ok, first I will check you already have multipass machines running on your
+Next, I will check you already have multipass machines running on your
 computer. This will help avoid potential naming conflicts.
 
 EOF
 
 sleep 10
+
+# Get running instances
+current_count=$(multipass list --format json | jq -r '.list.[].name' | wc -l)
+current_names=$(multipass list --format json | jq -r '.list.[].name')
 
 if [ $current_count -gt 0 ]; then
 	echo -e "Hey look, I found some!\n"
@@ -162,22 +207,18 @@ EOF
 
 sleep 10
 
-curl https://gist.githubusercontent.com/DavidHoenisch/76d72f543aa5afbd58aa5f1e58694535/raw/ba46befd5d9ba54421240271b97c40be391cc5f3/setup.sh > setup.sh
+curl https://gist.githubusercontent.com/DavidHoenisch/76d72f543aa5afbd58aa5f1e58694535/raw/ba46befd5d9ba54421240271b97c40be391cc5f3/setup.sh > ubuntu_setup.sh
 
 
-multipass transfer ./setup.sh nucamp-ubuntu-machine-2:/home/ubuntu
+multipass transfer ./ubuntu_setup.sh nucamp-ubuntu-machine-2:/home/ubuntu
 
-multipass exec nucamp-ubuntu-machine-2 -- sudo bash /home/ubuntu/setup.sh
+multipass exec nucamp-ubuntu-machine-2 -- sudo bash /home/ubuntu/ubuntu_setup.sh
 
 if [ $? -ne 0 ]; then
 	echo "Hmmm.... Something went heywire with that setup."
 	echo "The machine will still work but will need some help getting setup the rest of the way"
 	exit 1
 fi
-
-
-
-
 cat << EOF
 
 That's it! I am done
