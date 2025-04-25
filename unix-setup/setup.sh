@@ -70,7 +70,7 @@ if [ "$OS" == "Linux" ]; then
         fi
     fi
 elif [ "$OS" == "Darwin" ]; then
-    which homebrew > /dev/null
+    which multipass > /dev/null
     if [ $? -ne 0 ]; then
         echo "multipass is not installed! But not to fear, I know a trick or two..."
         brew install multipass
