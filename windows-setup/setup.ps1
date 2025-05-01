@@ -1,3 +1,14 @@
+# Custom Safe-Sleep function
+function Safe-Sleep {
+    param (
+        [int]$seconds = 0
+    )
+
+    if ($seconds -gt 0) {
+        Start-Sleep -Seconds $seconds
+    }
+}
+
 # Set execution policy and install Chocolatey with secure TLS
 Set-ExecutionPolicy Bypass -Scope Process -Force
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
@@ -142,14 +153,3 @@ You're all set. If you run into issues, rerun this script or check logs inside t
 "@
 
 Pause
-
-# Custom Safe-Sleep function
-function Safe-Sleep {
-    param (
-        [int]$seconds = 0
-    )
-
-    if ($seconds -gt 0) {
-        Start-Sleep -Seconds $seconds
-    }
-}
