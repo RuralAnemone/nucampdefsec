@@ -272,7 +272,7 @@ Now downloading and executing the setup script on the hacking machine...
 Safe-Sleep 3
 
 # Download setup script with better error handling
-$setupScriptUrl = "https://gist.githubusercontent.com/DavidHoenisch/76d72f543aa5afbd58aa5f1e58694535/raw/ba46befd5d9ba54421240271b97c40be391cc5f3/setup.sh"
+$setupScriptUrl = "https://raw.githubusercontent.com/nucamp/defsec/refs/heads/main/kali/setup.sh"
 $setupScriptPath = "./ubuntu_setup.sh"
 
 try {

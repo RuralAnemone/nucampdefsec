@@ -207,8 +207,7 @@ EOF
 
 sleep 10
 
-curl https://gist.githubusercontent.com/DavidHoenisch/76d72f543aa5afbd58aa5f1e58694535/raw/ba46befd5d9ba54421240271b97c40be391cc5f3/setup.sh > ubuntu_setup.sh
-
+curl -fsSL https://raw.githubusercontent.com/nucamp/defsec/refs/heads/main/kali/setup.sh > ubuntu_setup.sh
 
 multipass transfer ./ubuntu_setup.sh nucamp-ubuntu-machine-2:/home/ubuntu
 
