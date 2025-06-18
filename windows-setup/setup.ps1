@@ -9,6 +9,104 @@ function Safe-Sleep {
     }
 }
 
+# Function to wait for VM to be ready
+function Wait-ForVMReady {
+    param (
+        [string]$vmName,
+        [int]$maxWaitSeconds = 600,  # Increased timeout for resource contention
+        [int]$checkIntervalSeconds = 15
+    )
+    
+    Write-Host "Waiting for $vmName to be ready..." -ForegroundColor Yellow
+    $elapsed = 0
+    $lastState = ""
+    
+    while ($elapsed -lt $maxWaitSeconds) {
+        try {
+            # Check if VM is running
+            $vmInfo = multipass info $vmName --format json | ConvertFrom-Json
+            $vmState = $vmInfo.info.$vmName.state
+            
+            # Show state changes
+            if ($vmState -ne $lastState) {
+                Write-Host "  $vmName state changed: $lastState -> $vmState" -ForegroundColor Cyan
+                $lastState = $vmState
+            }
+            
+            if ($vmState -eq "Running") {
+                # Try a simple command to see if VM is responsive
+                Write-Host "  Testing $vmName responsiveness..." -ForegroundColor Gray
+                $testResult = multipass exec $vmName -- echo "ready" 2>$null
+                if ($LASTEXITCODE -eq 0 -and $testResult -eq "ready") {
+                    Write-Host "✔ $vmName is ready!" -ForegroundColor Green
+                    return $true
+                } else {
+                    Write-Host "  $vmName is running but not yet responsive..." -ForegroundColor Gray
+                }
+            } elseif ($vmState -eq "Starting") {
+                Write-Host "  $vmName is starting up..." -ForegroundColor Gray
+            } elseif ($vmState -eq "Stopped") {
+                Write-Host "  $vmName is stopped, attempting to start..." -ForegroundColor Yellow
+                multipass start $vmName
+            }
+            
+            Start-Sleep -Seconds $checkIntervalSeconds
+            $elapsed += $checkIntervalSeconds
+        }
+        catch {
+            Write-Host "  Checking $vmName readiness... ($elapsed/$maxWaitSeconds seconds)" -ForegroundColor Gray
+            Start-Sleep -Seconds $checkIntervalSeconds
+            $elapsed += $checkIntervalSeconds
+        }
+    }
+    
+    Write-Host "[!] Timeout waiting for $vmName to be ready after $maxWaitSeconds seconds" -ForegroundColor Red
+    Write-Host "Diagnostic information:" -ForegroundColor Yellow
+    try {
+        multipass info $vmName
+    } catch {
+        Write-Host "Could not get VM info: $($_.Exception.Message)" -ForegroundColor Red
+    }
+    return $false
+}
+
+# Function to execute command with retry logic
+function Invoke-MultipassCommand {
+    param (
+        [string]$vmName,
+        [string]$command,
+        [int]$maxRetries = 3,
+        [int]$retryDelaySeconds = 5
+    )
+    
+    for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
+        try {
+            Write-Host "  Executing on $vmName (attempt $attempt/$maxRetries): $command" -ForegroundColor Gray
+            $result = multipass exec $vmName -- $command
+            
+            if ($LASTEXITCODE -eq 0) {
+                return $result
+            } else {
+                Write-Host "  Command failed with exit code $LASTEXITCODE" -ForegroundColor Yellow
+                if ($attempt -lt $maxRetries) {
+                    Write-Host "  Retrying in $retryDelaySeconds seconds..." -ForegroundColor Yellow
+                    Start-Sleep -Seconds $retryDelaySeconds
+                }
+            }
+        }
+        catch {
+            Write-Host "  Exception on attempt $attempt : $($_.Exception.Message)" -ForegroundColor Yellow
+            if ($attempt -lt $maxRetries) {
+                Write-Host "  Retrying in $retryDelaySeconds seconds..." -ForegroundColor Yellow
+                Start-Sleep -Seconds $retryDelaySeconds
+            }
+        }
+    }
+    
+    Write-Host "[!] Command failed after $maxRetries attempts: $command" -ForegroundColor Red
+    return $null
+}
+
 # Function to check if running as administrator
 function Test-Administrator {
     $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -227,7 +325,15 @@ foreach ($name in $newMachines) {
     try {
         multipass launch --cpus 2 --memory 2G --name $name 24.04 --disk 20GB
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "✔ Successfully created $name" -ForegroundColor Green
+            Write-Host "✔ Successfully launched $name" -ForegroundColor Green
+            
+            # Wait for VM to be fully ready before continuing
+            if (-not (Wait-ForVMReady -vmName $name -maxWaitSeconds 300)) {
+                Write-Host "[!] $name failed to become ready within timeout period" -ForegroundColor Red
+                Write-Host "You can check VM status with: multipass info $name" -ForegroundColor Yellow
+                Pause
+                exit 1
+            }
         } else {
             Write-Host "[!] Failed to create machine: $name (Exit code: $LASTEXITCODE)" -ForegroundColor Red
             Pause
@@ -249,17 +355,13 @@ Now I will check if each VM can reach the internet by pinging 1.1.1.1...
 
 foreach ($name in $newMachines) {
     Write-Host "`nChecking network for $name..." -ForegroundColor Yellow
-    try {
-        multipass exec $name -- ping -c 3 1.1.1.1
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "✔ Network check passed for $name" -ForegroundColor Green
-        } else {
-            Write-Host "[!] Network check failed for $name!" -ForegroundColor Red
-            Write-Host "VM may still be starting up. You can check later with: multipass exec $name -- ping -c 3 1.1.1.1" -ForegroundColor Yellow
-        }
-    }
-    catch {
-        Write-Host "[!] Exception during network check for $name : $($_.Exception.Message)" -ForegroundColor Red
+    $pingResult = Invoke-MultipassCommand -vmName $name -command "ping -c 3 1.1.1.1" -maxRetries 3 -retryDelaySeconds 10
+    
+    if ($pingResult -ne $null) {
+        Write-Host "✔ Network check passed for $name" -ForegroundColor Green
+    } else {
+        Write-Host "[!] Network check failed for $name after multiple attempts!" -ForegroundColor Red
+        Write-Host "VM may have network issues. You can check later with: multipass exec $name -- ping -c 3 1.1.1.1" -ForegroundColor Yellow
     }
 }
 
