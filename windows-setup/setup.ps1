@@ -13,12 +13,13 @@ function Safe-Sleep {
 function Wait-ForVMReady {
     param (
         [string]$vmName,
-        [int]$maxWaitSeconds = 300,
-        [int]$checkIntervalSeconds = 10
+        [int]$maxWaitSeconds = 600,  # Increased timeout for resource contention
+        [int]$checkIntervalSeconds = 15
     )
     
     Write-Host "Waiting for $vmName to be ready..." -ForegroundColor Yellow
     $elapsed = 0
+    $lastState = ""
     
     while ($elapsed -lt $maxWaitSeconds) {
         try {
@@ -26,16 +27,29 @@ function Wait-ForVMReady {
             $vmInfo = multipass info $vmName --format json | ConvertFrom-Json
             $vmState = $vmInfo.info.$vmName.state
             
+            # Show state changes
+            if ($vmState -ne $lastState) {
+                Write-Host "  $vmName state changed: $lastState -> $vmState" -ForegroundColor Cyan
+                $lastState = $vmState
+            }
+            
             if ($vmState -eq "Running") {
                 # Try a simple command to see if VM is responsive
+                Write-Host "  Testing $vmName responsiveness..." -ForegroundColor Gray
                 $testResult = multipass exec $vmName -- echo "ready" 2>$null
                 if ($LASTEXITCODE -eq 0 -and $testResult -eq "ready") {
                     Write-Host "✔ $vmName is ready!" -ForegroundColor Green
                     return $true
+                } else {
+                    Write-Host "  $vmName is running but not yet responsive..." -ForegroundColor Gray
                 }
+            } elseif ($vmState -eq "Starting") {
+                Write-Host "  $vmName is starting up..." -ForegroundColor Gray
+            } elseif ($vmState -eq "Stopped") {
+                Write-Host "  $vmName is stopped, attempting to start..." -ForegroundColor Yellow
+                multipass start $vmName
             }
             
-            Write-Host "  $vmName state: $vmState - waiting..." -ForegroundColor Gray
             Start-Sleep -Seconds $checkIntervalSeconds
             $elapsed += $checkIntervalSeconds
         }
@@ -47,6 +61,12 @@ function Wait-ForVMReady {
     }
     
     Write-Host "[!] Timeout waiting for $vmName to be ready after $maxWaitSeconds seconds" -ForegroundColor Red
+    Write-Host "Diagnostic information:" -ForegroundColor Yellow
+    try {
+        multipass info $vmName
+    } catch {
+        Write-Host "Could not get VM info: $($_.Exception.Message)" -ForegroundColor Red
+    }
     return $false
 }
 
