@@ -139,9 +139,6 @@ EOF
 	done
 done
 
-
-
-
 cat << EOF
 
 Ok, so good news; I did not find any name conflicts we we are good
