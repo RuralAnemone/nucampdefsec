@@ -214,12 +214,19 @@ else {
             $releaseApiUrl = "https://api.github.com/repos/canonical/multipass/releases/latest"
             $releaseInfo = Invoke-RestMethod -Uri $releaseApiUrl -Headers @{ "User-Agent" = "PowerShell" }
 
-            # Choose correct asset
-            if ($isArm) {
-                $asset = $releaseInfo.assets | Where-Object { $_.name -match "win-arm64.*\.exe$" }
-            } else {
-                $asset = $releaseInfo.assets | Where-Object { $_.name -match "win-win64.*\.exe$" }
+           # Choose correct asset (more flexible pattern match)
+            $asset = $null
+            foreach ($a in $releaseInfo.assets) {
+                if ($isArm -and $a.name -match ".*win.*arm64.*\.exe$") {
+                    $asset = $a
+                    break
+                }
+                elseif (-not $isArm -and $a.name -match ".*win.*64.*\.exe$") {
+                    $asset = $a
+                    break
+                }
             }
+
 
             if ($null -eq $asset) {
                 throw "No suitable installer found for this system architecture ($arch)."
