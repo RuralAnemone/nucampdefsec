@@ -183,22 +183,10 @@ if (Get-Command "VBoxManage" -ErrorAction SilentlyContinue) {
 
 # Check if Multipass is already installed
 $multipassInstalled = $false
-
-# Detect system architecture
-$arch = (Get-CimInstance Win32_OperatingSystem).OSArchitecture
-$archString = if ($arch -like "*64*") { "64" } else { "32" }
-
-# Optional: Check for ARM64
-$isArm = $false
-if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64" -or $env:PROCESSOR_ARCHITEW6432 -eq "ARM64") {
-    $isArm = $true
-}
-
 if (Get-Command multipass -ErrorAction SilentlyContinue) {
     Write-Host "Multipass is already installed." -ForegroundColor Green
     $multipassInstalled = $true
-}
-else {
+} else {
     Write-Host "Installing Multipass..." -ForegroundColor Yellow
     try {
         if ($vboxInstalled) {
@@ -209,35 +197,12 @@ else {
 
         if ($LASTEXITCODE -ne 0) {
             Write-Host "[!] Multipass installation via Chocolatey failed. Trying direct download..." -ForegroundColor Yellow
-
-            # Fallback: Download latest Multipass from GitHub
-            $releaseApiUrl = "https://api.github.com/repos/canonical/multipass/releases/latest"
-            $releaseInfo = Invoke-RestMethod -Uri $releaseApiUrl -Headers @{ "User-Agent" = "PowerShell" }
-
-           # Choose correct asset (more flexible pattern match)
-            $asset = $null
-            foreach ($a in $releaseInfo.assets) {
-                if ($isArm -and $a.name -match ".*win.*arm64.*\.exe$") {
-                    $asset = $a
-                    break
-                }
-                elseif (-not $isArm -and $a.name -match ".*win.*64.*\.exe$") {
-                    $asset = $a
-                    break
-                }
-            }
-
-
-            if ($null -eq $asset) {
-                throw "No suitable installer found for this system architecture ($arch)."
-            }
-
+            $multipassUrl = "https://github.com/canonical/multipass/releases/latest/download/multipass-1.13.1+win-win64.exe"
             $multipassInstaller = "$env:TEMP\multipass-installer.exe"
-            Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $multipassInstaller
+            Invoke-WebRequest -Uri $multipassUrl -OutFile $multipassInstaller
             Start-Process -FilePath $multipassInstaller -ArgumentList "/S" -Wait
             Remove-Item $multipassInstaller -Force
         }
-
         $multipassInstalled = $true
     }
     catch {
