@@ -82,7 +82,7 @@ function Invoke-MultipassCommand {
     for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
         try {
             Write-Host "  Executing on $vmName (attempt $attempt/$maxRetries): $command" -ForegroundColor Gray
-            $result = multipass exec $vmName -- $command
+            $result = multipass exec $vmName -- bash -c "'$command'"
             
             if ($LASTEXITCODE -eq 0) {
                 return $result
