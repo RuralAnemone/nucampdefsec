@@ -82,7 +82,7 @@ function Invoke-MultipassCommand {
     for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
         try {
             Write-Host "  Executing on $vmName (attempt $attempt/$maxRetries): $command" -ForegroundColor Gray
-            $result = multipass exec $vmName -- bash -c "'$command'"
+            $result = multipass exec $vmName -- $command
             
             if ($LASTEXITCODE -eq 0) {
                 return $result
@@ -355,11 +355,6 @@ Now I will check if each VM can reach the internet by pinging 1.1.1.1...
 
 foreach ($name in $newMachines) {
     Write-Host "`nChecking network for $name..." -ForegroundColor Yellow
-
-    # Ensure ping is installed before checking network
-    Write-Host "Ensuring 'ping' is available on $name..." -ForegroundColor Yellow
-    Invoke-MultipassCommand -vmName $name -command "sudo apt update && sudo apt install -y iputils-ping"
-    
     $pingResult = Invoke-MultipassCommand -vmName $name -command "ping -c 3 1.1.1.1" -maxRetries 3 -retryDelaySeconds 10
     
     if ($pingResult -ne $null) {
