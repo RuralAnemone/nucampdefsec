@@ -135,6 +135,7 @@ Then, you can delete and purge the old machine with:
 multipass delete $name && multipass purge
 
 EOF
+			exit 1
 		fi
 	done
 done
@@ -149,7 +150,7 @@ EOF
 #Create new instance with features
 for name in "${new_machines[@]}";
 do
-	multipass launch --cpus 2 --memory 2G --name "$name" 24.04 --disk 20GB
+	multipass launch --cpus 2 --memory 2G --name "$name" 24.04 --disk 20GB < /dev/null
 
 	if [ $? -ne 0 ]; then
 		echo "ruh roh! Something is all screwy and I could not create the machines!"
@@ -165,8 +166,6 @@ sure everything will work as expected.
 EOF
 
 # Network health checks
-#
-
 
 cat << EOF
 
@@ -183,14 +182,13 @@ EOF
 
 for name in "${new_machines[@]}";
 do
-	multipass exec "$name" -- ping -c 3 1.1.1.1
+	multipass exec "$name" -- ping -c 3 1.1.1.1 < /dev/null
 
 	if [ $? -ne 0 ]; then
 		echo "ruh roh! Something is all screwy and I could not create the machines!"
 		exit 1
 	fi
 done
-
 
 cat << EOF
 
@@ -206,9 +204,14 @@ sleep 10
 
 curl -fsSL https://raw.githubusercontent.com/nucamp/defsec/refs/heads/main/kali/setup.sh > ubuntu_setup.sh
 
-multipass transfer ./ubuntu_setup.sh nucamp-ubuntu-machine-2:/home/ubuntu
+if [ $? -ne 0 ]; then
+	echo "ruh roh! I could not download the setup script from GitHub!"
+	exit 1
+fi
 
-multipass exec nucamp-ubuntu-machine-2 -- sudo bash /home/ubuntu/ubuntu_setup.sh
+multipass transfer ./ubuntu_setup.sh nucamp-ubuntu-machine-2:/home/ubuntu < /dev/null
+
+multipass exec nucamp-ubuntu-machine-2 -- sudo bash /home/ubuntu/ubuntu_setup.sh < /dev/null
 
 if [ $? -ne 0 ]; then
 	echo "Hmmm.... Something went heywire with that setup."
