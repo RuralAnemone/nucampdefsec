@@ -76,7 +76,7 @@ to let your know all the things that I am doing
 
 EOF
 
-if ask "Would you like me to show you exactly which commands I run?"; then
+if ask "Would you like me to show you exactly which commands I run?" Y; then
 	set -x
 fi
 
