@@ -1,5 +1,44 @@
 #!/usr/bin/env bash
 
+# from https://web.archive.org/web/20210922125055/https://gist.github.com/davejamesmiller/1965569#file-ask-sh
+function ask() {
+    local prompt default reply
+
+    if [[ ${2:-} = 'Y' ]]; then
+        prompt='Y/n'
+        default='Y'
+    elif [[ ${2:-} = 'N' ]]; then
+        prompt='y/N'
+        default='N'
+    else
+        prompt='y/n'
+        default=''
+    fi
+
+    while true; do
+
+        # Ask the question (not using "read -p" as it uses stderr not stdout)
+        echo -n "$1 [$prompt] "
+
+        # Read the answer (use /dev/tty in case stdin is redirected from somewhere else)
+        read -r reply </dev/tty
+
+        # Default?
+        if [[ -z $reply ]]; then
+            reply=$default
+        fi
+
+        # Check if the reply is valid
+        case "$reply" in
+            Y*|y*) return 0 ;;
+            N*|n*) return 1 ;;
+        esac
+
+	echo 'please answer with "yes" or "no"'
+
+    done
+}
+
 function install_snap() {
 
 cat << EOF
@@ -37,7 +76,9 @@ to let your know all the things that I am doing
 
 EOF
 
-sleep 10
+if ask "Would you like me to show you exactly which commands I run?"; then
+	set -x
+fi
 
 OS=$(uname -s)
 
